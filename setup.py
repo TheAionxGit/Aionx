@@ -16,7 +16,7 @@ setup(
     install_requires=[
         "numpy",
         "pandas==2.0.0",
-        "tensorflow==2.10",
+        "tensorflow==2.10.0",
         "scikit-learn",
     ],
 )
