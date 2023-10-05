@@ -14,9 +14,9 @@ setup(
     description='Library for designing Machine Learning models for time series forecast',
     packages=find_packages(),
     install_requires=[
-        "numpy"
-        "pandas==2.0.0"
-        "tensorflow==2.10"
-        "scikit-learn"
+        "numpy",
+        "pandas==2.0.0",
+        "tensorflow==2.10",
+        "scikit-learn",
     ],
 )
