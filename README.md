@@ -1,6 +1,6 @@
 # Machine Learning and Deep Learning for time series forecast
 
-![GitHub](https://img.shields.io/github/LICENSE/MikGitML/prototyping)
+![GitHub](https://img.shields.io/github/license/MikGitML/prototyping)
 ![Python](https://img.shields.io/badge/python-3.6%2B-blue)
 
 This repository contains code and resources for Time Series forecast and analysis using Machine Learning and Deep Learning and is available under the MIT license. 
