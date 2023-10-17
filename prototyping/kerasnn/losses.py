@@ -21,7 +21,7 @@ class GaussianLogLikelihood(tf.keras.losses.Loss):
     """
     @Author: Mikael Frenette
     
-    DESCRIPTION:
+    DESCRIPTION
     ---------------------------------------------------------------------------
     This function computes the negative log-likelihood loss between the true
     and predicted values using a Gaussian distribution. The loss is calculated
@@ -38,8 +38,8 @@ class GaussianLogLikelihood(tf.keras.losses.Loss):
     is expected to be more stable.
     ---------------------------------------------------------------------------
     
-    PARAMETERS:
-    -----------
+    PARAMETERS
+    ----------
     volatility_clip : The minimum value for the volatility. Default is 0.05.
         
      See keras.losses.loss documentation for more details. 
