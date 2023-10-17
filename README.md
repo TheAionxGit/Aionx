@@ -14,6 +14,10 @@ This repository contains code and resources for Time Series forecast and analysi
     - [Pandas](https://pandas.pydata.org/) : An open-source data analysis and manipulation library.
     - [TensorFlow](https://www.tensorflow.org/) : An open-source deep learning framework.
     - [Scikit-Learn](https://scikit-learn.org/stable/) : An open-source machine learning framework.
+ 
+## Models
+
+- Density Hemisphere Neural Network (DensityHNN): Implements the model proposed by ('Link to paper'). DensityHNN is a deep Learning algorithm designed to produce Density forecasts on time-dependent data...
 
 ## Getting Started
 
