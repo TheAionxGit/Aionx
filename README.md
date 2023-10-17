@@ -1,9 +1,9 @@
-# Time Series Machine Learning and Deep Learning
+# Machine Learning and Deep Learning for time series forecast
 
-![GitHub](https://img.shields.io/github/license/YourUsername/TimeSeries-ML-DL)
+![GitHub](https://img.shields.io/github/license/MikGitML/prototyping)
 ![Python](https://img.shields.io/badge/python-3.6%2B-blue)
 
-This repository contains code and resources for Time Series analysis using Machine Learning and Deep Learning. It's designed to help you get started with time series forecasting and classification tasks. You'll find examples, tutorials, and utility functions to work with time series data effectively.
+This repository contains code and resources for Time Series forecast and analysis using Machine Learning and Deep Learning. 
 
 ## Features
 
