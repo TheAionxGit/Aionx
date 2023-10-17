@@ -3,12 +3,12 @@
 ![GitHub](https://img.shields.io/github/license/MikGitML/prototyping)
 ![Python](https://img.shields.io/badge/python-3.6%2B-blue)
 
-This repository contains code and resources for Time Series forecast and analysis using Machine Learning and Deep Learning. 
+This repository contains code and resources for Time Series forecast and analysis using Machine Learning and Deep Learning and is available under the MIT license. 
 
 ## Features
 
-- Machine Learning and Deep Learning techniques for time series.
-- Easy-to-use examples with [Scikit-Learn](https://scikit-learn.org/stable/), [Keras](https://keras.io/), and [PyTorch](https://pytorch.org/).
+- Machine Learning and Deep Learning models for time series.
+- Easy-to-use examples with [Scikit-Learn](https://scikit-learn.org/stable/), [Keras](https://keras.io/) and, eventually,  [PyTorch](https://pytorch.org/).
 - Only four dependencies:
     - [NumPy](https://numpy.org/)
     - [Pandas](https://pandas.pydata.org/) (Version 2.0.0)
@@ -20,7 +20,7 @@ This repository contains code and resources for Time Series forecast and analysi
 1. Clone this repository:
 
     ```bash
-    git clone https://github.com/YourUsername/TimeSeries-ML-DL.git
+    git clone https://github.com/MikGitML/prototyping.git
     ```
 
 2. Install the required dependencies:
@@ -29,7 +29,7 @@ This repository contains code and resources for Time Series forecast and analysi
     pip install -r requirements.txt
     ```
 
-3. Dive into the example notebooks in the `examples/` directory to get started with time series analysis.
+3. Dive into the example notebooks in the `examples/` directory to get started with time series analysis. (TODO)
 
 ## Usage
 
