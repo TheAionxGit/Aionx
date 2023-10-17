@@ -17,7 +17,8 @@ This repository contains code and resources for Time Series forecast and analysi
  
 ## Models
 
-- Density Hemisphere Neural Network (DensityHNN): Implements the model proposed by ('Link to paper'). DensityHNN is a deep Learning algorithm designed to produce Density forecasts on time-dependent data...
+- Density Hemisphere Neural Network (DensityHNN):
+    - Implements the model proposed by [Paper](linktopaper). DensityHNN is a deep Learning algorithm designed to produce Density forecasts on time-dependent data...
 
 ## Getting Started
 
