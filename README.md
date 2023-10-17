@@ -1,19 +1,19 @@
 # Machine Learning and Deep Learning for time series forecast
 
-![GitHub](https://img.shields.io/github/license/MikGitML/prototyping)
-![Python](https://img.shields.io/badge/python-3.6%2B-blue)
+![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg)
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
 This repository contains code and resources for Time Series forecast and analysis using Machine Learning and Deep Learning and is available under the MIT license. 
 
 ## Features
 
 - Machine Learning and Deep Learning models for time series.
-- Easy-to-use examples with [Scikit-Learn](https://scikit-learn.org/stable/), [Keras](https://keras.io/) and, eventually,  [PyTorch](https://pytorch.org/).
+- Easy-to-use examples with [Scikit-Learn](https://scikit-learn.org/stable/), [Keras](https://keras.io/) and eventually [PyTorch](https://pytorch.org/).
 - Only four dependencies:
-    - [NumPy](https://numpy.org/)
-    - [Pandas](https://pandas.pydata.org/) (Version 2.0.0)
-    - [TensorFlow](https://www.tensorflow.org/)
-    - [Scikit-Learn](https://scikit-learn.org/stable/)
+    - [NumPy](https://numpy.org/) : The fundamental package for scientific computing in Python.
+    - [Pandas](https://pandas.pydata.org/) : An open-source data analysis and manipulation library.
+    - [TensorFlow](https://www.tensorflow.org/) : An open-source deep learning framework.
+    - [Scikit-Learn](https://scikit-learn.org/stable/) : An open-source machine learning framework.
 
 ## Getting Started
 
@@ -29,20 +29,13 @@ This repository contains code and resources for Time Series forecast and analysi
     pip install -r requirements.txt
     ```
 
-3. Dive into the example notebooks in the `examples/` directory to get started with time series analysis. (TODO)
+3. (TODO) explore the example notebooks in the `examples/` directory to get started.
 
 ## Usage
 
 This repository provides a simple and flexible framework for time series analysis. You can start with the example notebooks in the `examples/` directory to understand how to use the provided functions and classes.
 
 ## Dependencies
-
-This project relies on the following dependencies:
-
-- [NumPy](https://numpy.org/): The fundamental package for scientific computing in Python.
-- [Pandas](https://pandas.pydata.org/) (Version 2.0.0): An open-source data analysis and manipulation library.
-- [TensorFlow](https://www.tensorflow.org/): An open-source machine learning framework.
-- [Scikit-Learn](https://scikit-learn.org/stable/): A simple and efficient tool for data mining and data analysis.
 
 You can install them using the following command:
 
