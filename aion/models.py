@@ -1,5 +1,5 @@
 """
-prototyping models.py is a file for storing model's classes.
+aion models.py is a file for storing model's classes.
 
 The module contains:
     
@@ -24,13 +24,13 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import LinearRegression
 
-from prototyping.scalers import StandardScaler
-from prototyping.pipelines import WindowDataset
-from prototyping.kerasnn.trainers import Trainer
-from prototyping.utils import (add_trends, WindowEstimationHandler)
-from prototyping.bootstrap import TimeSeriesBlockBootstrap
-from prototyping.kerasnn.ensemble import DeepEnsemble, OutOfBagPredictor
-from prototyping.kerasnn.losses import GaussianLogLikelihood
+from aion.scalers import StandardScaler
+from aion.pipelines import WindowDataset
+from aion.kerasnn.trainers import Trainer
+from aion.utils import (add_trends, WindowEstimationHandler)
+from aion.bootstrap import TimeSeriesBlockBootstrap
+from aion.kerasnn.ensemble import DeepEnsemble, OutOfBagPredictor
+from aion.kerasnn.losses import GaussianLogLikelihood
 
 import warnings
 
