@@ -13,7 +13,7 @@ The module contains:
 # Created: September 2023
 
 import tensorflow as tf
-from prototyping.kerasnn import base
+from aion.kerasnn import base
 from typing import Union, List, Callable
 
 class Trainer(base.NetworkTrainer):

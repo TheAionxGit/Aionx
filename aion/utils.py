@@ -1,5 +1,5 @@
 """
-Prototyping utils.py is a file for storing/dumping utility classes.
+aion utils.py is a file for storing/dumping utility classes.
 
 The module contains:
 
@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from typing import Union
-from prototyping.wrappers import downstream
+from aion.wrappers import downstream
 
 @downstream(
     pd.DataFrame, dtype="float32"
