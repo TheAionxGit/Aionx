@@ -1,5 +1,5 @@
 """
- Base .py file for storing parent classes useful entirely in the Tensorflow/
+ kerasnn base.py file for storing parent classes useful entirely in the Tensorflow/
  keras Ecosystem.
  
  The module contains:
@@ -14,7 +14,7 @@ import tensorflow as tf
 import numpy as np 
 from typing import Union, List, Callable
 
-from prototyping.kerasnn.utils import (
+from aion.kerasnn.utils import (
     TensorFlowDatasetConfigurer,
     LogsTracker,
     ProgressBar
