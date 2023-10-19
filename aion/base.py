@@ -1,5 +1,5 @@
 """
-Prototyping base.py is a file for storing base classes exclusively used in the
+aion base.py is a file for storing base classes exclusively used in the
 in the entire prototyping ecosystem.
 
 The module contains:
