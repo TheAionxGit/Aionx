@@ -1,5 +1,5 @@
 """
-Prototyping scalers.py is a file for storing metric classes.
+aion scalers.py is a file for storing metric classes.
 
 The module contains:
     
@@ -18,8 +18,8 @@ The module contains:
 # Created: August 2023
 
 import pandas as pd
-from prototyping.base import Scaler
-from prototyping.wrappers import downstream
+from aion.base import Scaler
+from aion.wrappers import downstream
 
 class MissingStatsError(Exception):
     """
