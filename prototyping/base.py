@@ -1,6 +1,6 @@
 """
-Prototyping base.py is a file for storing base classes exclusively used in the
-in the entire prototyping ecosystem.
+oikonometrica base.py is a file for storing base classes exclusively used in the
+in the entire oikonometrica ecosystem.
 
 The module contains:
 
