@@ -1,5 +1,5 @@
 """
-Prototyping bootstrap.py is a file for storing data bootstrapping classes.
+aion bootstrap.py is a file for storing data bootstrapping classes.
 
 The module contains:
 
@@ -11,11 +11,9 @@ The module contains:
 # Author: Mikael Frenette (mik.frenette@gmail.com)
 # Created: September 2023
 
-
 import numpy as np
 from typing import Iterable
-from prototyping import base
-
+from aion import base
     
 class TimeSeriesBlockBootstrap(base.Bootstrapper):
     """

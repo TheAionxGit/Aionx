@@ -1,5 +1,5 @@
 """
-Ensemble.py is a module designed for storing ensemble-based models that are
+ensemble.py is a module designed for storing ensemble-based models that are
 useful within the TensorFlow/Keras ecosystem.
 
 The module contains:
@@ -28,10 +28,10 @@ import numpy as np
 import pandas as pd
 from typing import Union, List
 
-from prototyping.kerasnn import base as knnbase
-from prototyping import base
-from prototyping.wrappers import timeit, downstream
-from prototyping.bootstrap import TimeSeriesBlockBootstrap
+from aion.kerasnn import base as knnbase
+from aion import base
+from aion.wrappers import timeit, downstream
+from aion.bootstrap import TimeSeriesBlockBootstrap
 
 class ModelGenerator:
     """

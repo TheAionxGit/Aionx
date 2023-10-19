@@ -1,5 +1,5 @@
 """
-Prototyping metrics.py is a file for storing metric classes.
+aion metrics.py is a file for storing metric classes.
 
 The module contains:
     
@@ -20,7 +20,7 @@ The module contains:
 import pandas as pd
 import numpy as np
 from typing import Union, List
-from prototyping import base
+from aion import base
 
 
 class WindowDataset(base.WindowHandler):
