@@ -1,4 +1,0 @@
-numpy
-pandas==2.0.0
-tensorflow
-scikit-learn
