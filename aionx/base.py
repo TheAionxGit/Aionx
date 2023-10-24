@@ -305,10 +305,11 @@ class DensityMetric(Metric):
         """
         y_true, y_pred = self._configure(y_true, y_pred)
         y_pred = np.split(y_pred,
-                          indices_or_sections=y_pred.shape[-1], axis=1)
-        if y_true.shape != y_pred[:, 0].shape !=y_pred[:, 1].shape:
+                          indices_or_sections=y_pred.shape[-1], axis=1)    
+        if y_true.shape != y_pred[0].shape !=y_pred[1].shape:
             raise ValueError("Input arrays must have the same shape.")
         return y_true, y_pred
+    
     
     
 class Scaler(object):
