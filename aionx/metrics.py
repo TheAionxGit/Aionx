@@ -156,8 +156,7 @@ class LogScore(base.DensityMetric):
         y_true, y_pred = super().__call__(y_true, y_pred)
         
         # Convert inputs to numpy arrays for ease of calculation
-        y, mu, sigma = y_true, y_pred[0], y_pred[1]
-        
+        y, mu, sigma = y_true, np.squeeze(y_pred[0]), np.squeeze(y_pred[1])
 
         # Calculate the error between true values and mean predictions
         eps = y - mu
@@ -214,7 +213,7 @@ class NominalCoverage(base.DensityMetric):
             float : the computed metric with the specified precision type.
         """
         y_true, y_pred = super().__call__(y_true, y_pred)
-        y, mu, sigma = y_true, y_pred[0], y_pred[1]
+        y, mu, sigma = y_true, np.squeeze(y_pred[0]), np.squeeze(y_pred[1])
 
         # Compute the boolean masks for values outside the coverage interval
         above_interval = y - mu > (self.std * sigma)
