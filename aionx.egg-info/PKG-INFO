@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: aionx
+Version: 1.0.0
+Summary: Library for designing Machine Learning models for time series forecast
+Author: Mikael Frenette
+Author-email: <mik.frenette@gmail.com>
+License-File: LICENSE
