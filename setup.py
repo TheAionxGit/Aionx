@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aionx',
-    version='1.0.0',
+    version='1.0.3',
     author='Mikael Frenette',
     author_email="<mik.frenette@gmail.com>",
     description='Library for designing Machine Learning models for time series forecast',
