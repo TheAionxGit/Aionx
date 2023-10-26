@@ -191,13 +191,51 @@ class Bootstrapper(object):
         None
     """
 
-    def __init__(self, sampling_rate: float=0.8, replace:bool=False)->None:
+    def __init__(self, sampling_rate: float=0.8,
+                 replace:bool=False)->None:
+        
         if not (0.0 < sampling_rate < 1.0):
             raise ValueError("sampling_rate value must be a float >0.0 and <1.0")
         else:
             self._sampling_rate = sampling_rate
         self._replace = replace
+        
+        self.iterations = 0
+        self.reset_state() 
+        
+    def reset_state(self):
+        """
+        DESCRIPTION
+        -------------------------------------------------------------------------
+        resets internal history
+        -------------------------------------------------------------------------
+        """
+        self._state = {}
+        
+    def _configure(self, inputs):
+        if inputs is None:
+            return None
+        
+        else:
+            return (inputs, ) if not isinstance(inputs, tuple) else inputs
 
+    def _compute_length(self, X, y):
+        if X is not None:
+            return len(X[0])
+        else:
+            if y is not None:
+                return len(y[0])
+            else:
+                raise ValueError("Input for X or y or both must be provided. Found None.")
+        
+    def _state_history(self, subset):
+        history = []
+        for it, values in self.state.items():
+            for key, vals in values.items():
+                if key == subset:
+                    history.append(vals)
+        return history
+        
     @property
     def sampling_rate(self):
         return self._sampling_rate
@@ -205,7 +243,10 @@ class Bootstrapper(object):
     @property
     def replace(self):
         return self._replace
-    
+
+    @property
+    def state(self):
+        return self._state
   
     
 class Metric(object):
