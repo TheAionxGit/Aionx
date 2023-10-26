@@ -68,8 +68,8 @@ class ModelGenerator:
 
         # Check if the provided model is an instance of keras.models.Model
         self.iskerasmodel = isinstance(self.model, keras.models.Model)
-        self.original_weights = self.model.get_weights()
-
+        if self.iskerasmodel:
+            self.original_weights = self.model.get_weights()
 
     def __iter__(self):
         return self
@@ -92,7 +92,6 @@ class ModelGenerator:
                 return model
         else:
             raise StopIteration
-            
             
 class DeepEnsemble:
 
@@ -161,20 +160,16 @@ class DeepEnsemble:
         self._n_estimators = n_estimators
         self._trainer = trainer
         self.network = network
+        self.block_size = block_size
+        self.sampling_rate = sampling_rate
+        self.replace = replace
         
         self.model_generator = ModelGenerator(
             model = self.network,
             n_estimators=self._n_estimators
             )
-
-        if sampler is None:
-            self._sampler = TimeSeriesBlockBootstrap(
-                block_size=block_size,
-                sampling_rate=sampling_rate,
-                replace=replace
-            )
-        else:
-            self._sampler = sampler
+        
+        self._sampler = sampler
         
         # out of bag indices will be stored here
         self._oob_idx = {}
@@ -252,18 +247,23 @@ class DeepEnsemble:
             None
         """
         
+        if self._sampler is None:
+            self._sampler = TimeSeriesBlockBootstrap(
+                X, y, block_size=self.block_size,
+                sampling_rate=self.sampling_rate, replace=True
+            )
+        
         for e, model in enumerate(self.model_generator):
             keras.backend.clear_session()
-            bootstrap_idx, oob_idx = self._sampler(X, return_indices=True)
-            X_train, y_train = X[bootstrap_idx], y[bootstrap_idx]
-            X_val, y_val = X[oob_idx], y[oob_idx]
+            X_train, y_train, X_val, y_val = next(self._sampler)
+
             if self._trainer is not None:
                 self._trainer.train(
                     model,
                     X_train,
                     y_train,
-                    validation_data=(X_val, y_val),
                     epochs=epochs,
+                    validation_data=(X_val, y_val),
                     batch_size=batch_size,
                     validation_batch_size=validation_batch_size,
                     **tfkwargs
@@ -281,7 +281,7 @@ class DeepEnsemble:
                 clear_output(wait=True)
                 
             self._estimators.append(model.get_weights() if self.model_generator.iskerasmodel else model)
-            self._oob_idx[f"Estimator_{e}"] = oob_idx
+            self._oob_idx[f"Estimator_{e}"] = self._sampler.oob_indices[-1]
             
             
     def predict(self, X: Union[tuple[Union[np.ndarray, tf.Tensor],
