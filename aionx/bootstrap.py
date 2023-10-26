@@ -28,7 +28,12 @@ class TimeSeriesBlockBootstrap(base.Bootstrapper):
 
     PARAMETERS
     ----------
+    X             : A matrix-like containing regressors.
+
+    y             : A matrix-like containing target variables. Default to None.
+    
     block_size    : The size of time-dependent blocks to be bootstrapped.
+                    Default to 8.
 
     sampling_rate : An amount of 'sampling_rate' will be bootstrapped from the
                             data. Default to 0.8.
@@ -38,62 +43,85 @@ class TimeSeriesBlockBootstrap(base.Bootstrapper):
                     
     **kwargs      : extra parameters inheriting from parent class.
 
+    USAGE
+    -----
+    sampler = TimeSeriesBlockBootstrap(
+            X=your_X, y=your_y, block_size=24, sampling_rate=0.8
+    )
+    X_train, y_train, X_val, y_val = next(sampler)
+
     """
     
     def __init__(self,
-                 block_size:int,
+                 X,
+                 y = None,
+                 block_size:int=8,
                  sampling_rate:float=0.8,
                  replace:bool=True,
                  **kwargs)->None:
         
         super().__init__(sampling_rate=sampling_rate,
                          replace=replace,**kwargs)
-        self._block_size = block_size
-        
-    
-    def __call__(self, data:Iterable, return_indices:bool=True)->tuple:
+        self.block_size = block_size
+        self.X, self.y = self._configure(X), self._configure(y) 
+        self.N = self._compute_length(self.X, self.y)
+     
+    def generate_indices(self):
         """
-        PARAMETERS
-        ----------
-        data           : the data to sample from. the sampling will be done on
-                         the length of data(len(data)). so the input must be an
-                         iterable with a length.
-        
-        return_indices : If true will return indices of the of the
-                         bootstrapped data. otherwise, will return the sampled
-                         data. Default to True.
-                         
-        RETURNS
-            A tuple or a list of tuple containing two arrays:
-                -bootstrap_idx : Indices of the bootstrap samples.
-                -oob_idx       : Indices of the out-of-bag samples.
-        """
-        
-        # compute data length. bootstrap will be performed across the length dimension
-        # of the data
-        if isinstance(data, tuple):
-            N = len(data[0])
-        else:
-            N = len(data)
-            data = tuple(data)
+        DESCRIPTION
+        ---------------------------------------------------------------------------
+        Generates a subset of training and validation samples.
+        ---------------------------------------------------------------------------
 
+        RETURNS
+            list containining a mapping indices for the bootstrapped and out-of-bag
+            values.
+        """
+        self.iterations+=1
         # compute number of blocks
-        vec = np.arange(0, N / self._block_size, 1)
+        vec = np.arange(0, self.N / self.block_size, 1)
 
         # draw random blocks
-        groups = np.sort(np.random.choice(vec, size=N, replace=self.replace).astype(int))
-        rando_vec = np.random.exponential(scale=1, size=(N // self._block_size) + 1)[groups]
+        groups = np.sort(np.random.choice(vec, size=self.N, replace=self.replace).astype(int))
+        rando_vec = np.random.exponential(scale=1, size=(self.N // self.block_size) + 1)[groups]
         rando_vec = np.where(rando_vec > np.quantile(rando_vec, 1 - self.sampling_rate))
         chosen_one_plus = rando_vec
 
-        # reshape and split between bootstrap and out-of-bag samples
         bootstrap_idx = np.sort(chosen_one_plus).reshape(-1, )
-        oob_idx = np.delete(np.arange(0, N, 1), bootstrap_idx)
+        oob_idx = np.delete(np.arange(0, self.N, 1), bootstrap_idx)
+        return bootstrap_idx, oob_idx
+        
+    def __iter__(self):
+        return self
 
-        if return_indices:
-            return bootstrap_idx, oob_idx
+    def __next__(self):
+        bootstrap_indices, oob_indices = self.generate_indices()
+        self.state[f"{self.iterations}"] = {"bootstrap_indices":bootstrap_indices,
+                                            "oob_indices":oob_indices}
+        
+        if self.X is not None:
+            X_train = tuple([np.array(X)[bootstrap_indices] for X in self.X])            
+            X_val = tuple([np.array(X)[oob_indices] for X in self.X])
         else:
-            sampled = [(np.array(dta)[bootstrap_idx], np.array(dta)[oob_idx]) for dta in data]
-            return sampled[0] if len(sampled) == 1 else sampled
+            X_train, X_val = (None,), (None,)
+            
+        if self.y is not None:
+            y_train = tuple([np.array(y)[bootstrap_indices] for y in self.y])      
+            y_val = tuple([np.array(y)[oob_indices] for y in self.y])
+        else:
+            y_train, y_val = (None,), (None,)
+            
+        return [X_train[0] if len(X_train) == 1 else X_train,
+                y_train[0] if len(y_train) == 1 else y_train,
+                X_val[0] if len(X_val) == 1 else X_val,
+                y_val[0] if len(y_val) == 1 else y_val]
+    
+    @property
+    def bootstrap_indices(self):
+        return self._state_history("bootstrap_indices")
+
+    @property
+    def oob_indices(self):
+        return self._state_history("oob_indices")
 
 
