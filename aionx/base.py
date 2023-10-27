@@ -384,7 +384,7 @@ class Scaler(object):
         for col in data:
             summarystat = {}
             summarystat["mean"] = data[col].mean()
-            summarystat["std"] = data[col].std()
+            summarystat["std"] = data[col].std() if data[col].std() != 0 else 1.0
             self._stats[col] = summarystat
         
     @property
