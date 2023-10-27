@@ -178,14 +178,6 @@ class DensityHNN(object):
             targets = [self.target], sampler = None
             )
         
-        # We perform block subsampling bootstraps for each weak learners.
-        self.__sampler = TimeSeriesBlockBootstrap(
-            sampling_rate=self.sampling_rate,
-            block_size=self.block_size,
-            replace=True
-            )
-
-        
     @staticmethod
     def base_architecture(
             input_shape:tuple,
@@ -581,10 +573,16 @@ class DensityHNN(object):
         X_train, y_train = self.__pipeline(train_scaled)
         X_full, y_full = self.__pred_pipeline(full_scaled)
         input_shape=(self.lags, X_train.shape[-1]) # defining input shapes.
+                       
+        self.__sampler = TimeSeriesBlockBootstrap(
+            X=X_train, y=y_train,
+            sampling_rate=self.sampling_rate,
+            block_size=self.block_size,
+            replace=True
+        )
         
         prior_dnn = DensityHNN.prior_dnn_architecture(input_shape)
-        
-        
+    
         pred_idx = pd.date_range(
             data.index[0+self.lags+self.horizon-1],
             periods=len(data)-self.lags+1,
