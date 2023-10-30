@@ -25,7 +25,7 @@ This repository contains code and resources for Time Series forecast and analysi
 1. Clone this repository:
 
     ```bash
-    git clone https://github.com/MikGitML/aion.git
+    git clone https://github.com/TheAionxGit/aionx.git
     ```
 
 2. Install the required dependencies:
