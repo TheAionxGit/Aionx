@@ -98,9 +98,7 @@ class WindowDataset(base.WindowHandler):
         
         if self.sampler is not None:
             # perform sampling and return sampled and out-of-bag indices
-            self.train_idx, self.oob_idx = self.sampler(
-                windows, return_indices=True
-            )
+            self.train_idx, self.oob_idx = self.sampler(X = windows).generate_indices()
 
             # split X_train/y_train and X_val/y_val
             train_windows = [windows[i] for i in self.train_idx]
@@ -236,7 +234,7 @@ class Seq2SeqDataset(base.TimeSeriesDataset):
         
         if self.sampler is not None:
             # perform sampling and return sampled and out-of-bag indices
-            self.train_idx, self.oob_idx = self.sampler(windows)
+            self.train_idx, self.oob_idx = self.sampler(X = windows).generate_indices()
 
             # split X_train/y_train and X_val/y_val
             train_windows = [windows[i] for i in self.train_idx]
