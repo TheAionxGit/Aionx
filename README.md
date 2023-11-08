@@ -1,4 +1,4 @@
-# Machine Learning and Deep Learning for time series forecast
+# Machine Learning and Deep Learning for time series forecasting
 
 ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
