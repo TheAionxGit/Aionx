@@ -21,12 +21,12 @@ This repository contains code and resources for Time Series forecast and analysi
 Implements the model proposed in [Paper](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4627773). DensityHNN is a deep Learning algorithm designed to produce Density forecasts on time-dependent data by using an ensemble of deep neural networks. The proposed architecture is the following:
 
 <div align="center">
-    <img src="https://github.com/TheAionxGit/Aionx/blob/TheAionxGit-patch-1/images/DensityHNN_archi.png" alt="DensityHNN Architecture" width="600"/>.
+    <img src="https://github.com/TheAionxGit/Aionx/blob/Main/images/DensityHNN_archi.png" alt="DensityHNN Architecture" width="600"/>.
 </div>
 After estimation, the model is capable of producing conditional forecasts along with uncertainty estimates.
 
 <div align="center">
-    <img src="https://github.com/TheAionxGit/Aionx/blob/TheAionxGit-patch-1/images/GDP_S1.png" alt="GDP S1" width="600"/>.
+    <img src="https://github.com/TheAionxGit/Aionx/blob/Main/images/GDP_S1.png" alt="GDP S1" width="600"/>.
 </div>
 
 ## Getting Started
