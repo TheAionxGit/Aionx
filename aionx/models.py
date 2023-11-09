@@ -450,30 +450,23 @@ class DensityHNN(object):
                       prior_dnn and the hnn. Also, the dictionary contains the
                       estimated volatility emphasis parameter.
         """
-        
+
+        # making sure the data respects the index constraints.
+        data = self._validate_dataset(data)
+                  
         if expanding: # performs __static_fit() for each expanding window.
-            windows = WindowEstimationHandler(self._validate_dataset(data),
+            windows = WindowEstimationHandler(data,
                                               expanding_start=expanding_start,
                                               last_window=last_expanding_window,
                                               timesteps=expanding_steps)
-            
-            # generating prediction index.
-            # WARNING : This could create problems if the provided data does not
-            # have consistent dates (i.e using financial data).  
-            # This will have to be done differently.
             pred_idx = pd.date_range(
                 data.index[0+self.lags+self.horizon-1],
                 periods=len(data)-self.lags+1,
                 freq=pd.infer_freq(data.index)
-                )
-            
-            # expanding estimations will be stored temporarily in 
-            # python dicts and then will be looped over to form a final
-            # ensemble prediction.
+            )
             dnn_rolling_outputs = {}
             hnn_rolling_outputs = {}
-            vol_emphasis = {}
-            
+            vol_emphasis        = {}
             
             # main estimation loop.
             for step, (train, oos) in enumerate(windows):
@@ -493,7 +486,7 @@ class DensityHNN(object):
                     "dnn_forecast"]
                 hnn_rolling_outputs[f"{oos.index[0]}"] = window_results[
                     "hnn_forecast"]
-                vol_emphasis["f{oos.index[0]}"] = window_results[
+                vol_emphasis[f"{oos.index[0]}"] = window_results[
                     "volatility_emphasis"]
                 
             dnn_forecast = pd.DataFrame(columns=["dnn_forecast"],
@@ -536,18 +529,13 @@ class DensityHNN(object):
                                                          orient="index")
             volatility_emphasis.columns = ["volatility_emphasis"]
             volatility_emphasis.index.name = "date"
-            
             # the resulting dict.
             results = {"hnn_forecast":hnn_forecast,
                        "dnn_forecast":dnn_forecast,
                        "volatility_emphasis":volatility_emphasis}
-            
-            
-            
         else:
             results = self._static_fit(data, train_start=train_start, 
                                       train_end=train_end)
-            
         return results
     
     
@@ -557,30 +545,33 @@ class DensityHNN(object):
                    train_end:Union[str, datetime]):
 
         # adding trends to the data
-        data = add_trends(
-            self._validate_dataset(data),
-            self.trends
-        )
+        data = add_trends(data, self.trends)
+                       
         #instantiate a scaler
         scaler = StandardScaler()
+                       
         # get the statistical parameters needed on the train set (mean, std)
         scaler.get_stats(data.loc[train_start:train_end])
-        # scale using the mean and std computed
+                       
+        # scale using the computed mean and std
         full_scaled = scaler.scale(data)
+                       
         # split
         train_scaled = full_scaled.loc[train_start:train_end]
         # create data ready to be used by the models
         X_train, y_train = self.__pipeline(train_scaled)
         X_full, y_full = self.__pred_pipeline(full_scaled)
         input_shape=(self.lags, X_train.shape[-1]) # defining input shapes.
-                       
+
+        # instantiate sampler
         self.__sampler = TimeSeriesBlockBootstrap(
             X=X_train, y=y_train,
             sampling_rate=self.sampling_rate,
             block_size=self.block_size,
             replace=True
         )
-        
+
+        # build prior fully connected network
         prior_dnn = DensityHNN.prior_dnn_architecture(input_shape)
     
         pred_idx = pd.date_range(
@@ -590,19 +581,22 @@ class DensityHNN(object):
             )
         tf.keras.backend.clear_session() # this is important so we do not
         # get overlapping graphs or tensorflow session during estimations.
-        callbacks = [
-            keras.callbacks.EarlyStopping(monitor="val_loss",
-                                          patience=self.patience)
-            ]
+
+        # only one tensorflow callback is used for the model.
+        callbacks = [keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=self.patience)]
+
+        # custom trainer
         dnn_trainer = Trainer(
             optimizer = keras.optimizers.Adam(self.learning_rate),
             loss      = keras.losses.MeanSquaredError(),
             metrics   = None,
             n_trainings = self.prior_bootstraps
         )
+                       
         # instantiate and fit
         prior_dnn = DensityHNN.prior_dnn_architecture(input_shape)
-        ensemble_dnn = DeepEnsemble(
+        ensemble_dnn = DeepEnsemble( # wrap into a deep ensemble.
             n_estimators=self.prior_bootstraps,
             network = prior_dnn,
             trainer = dnn_trainer,
@@ -614,48 +608,48 @@ class DensityHNN(object):
             batch_size=None,
             validation_batch_size=None,
             verbose=self.verbose
-            )
-        # predict. By default, the predict method will return all estimators
-        # forecasts.
+            )               
+        # By default, the predict method will return all estimators forecasts.
         dnn_prediction = ensemble_dnn.predict(X_full,
                                    batch_size=X_full.shape[0],
                                    verbose=0)
+        # gather and create bluprints for out-of-bag forecasts.
         oob_idx = ensemble_dnn.oob_indices
         oob_predictor = OutOfBagPredictor(oob_idx)
-        dnn_oob = oob_predictor(dnn_prediction[:len(y_train)],
+
+        # oob and oos forecasts
+        dnn_oob = oob_predictor(np.copy(dnn_prediction[:len(y_train)]),
                                 sampling_rate=self.sampling_rate)
-        dnn_oos = np.mean(dnn_prediction[len(y_train):], axis=-1)
+        dnn_oos = np.mean(np.copy(dnn_prediction[len(y_train):]), axis=-1)
         dnn_forecast = np.concatenate([dnn_oob, dnn_oos], axis=0)
     
         # compute volatility emphasis using the MSE on the out-of-bag forecast.
         volatility_emphasis = mean_squared_error(dnn_oob, np.squeeze(y_train))
         
-        dnn_pred = pd.DataFrame(dnn_forecast, columns=["forecast"],
-                                index=pred_idx)
-        dnn_pred = scaler.unscale(dnn_pred, target=self.target,
-                                         use_mean=True)
-        # the prior dnn estimation is over. 
-        # Now I clear the session and start estimating the HNN.
-        # Also note that tf.keras.backend.clear_session() is called between each
-        # weak learner estimation.
+        dnn_pred = scaler.unscale(
+            pd.DataFrame(dnn_forecast, columns=["forecast"], index=pred_idx),
+            target=self.target, use_mean=True
+        )
+                       
         tf.keras.backend.clear_session()
         # instantiate and fit
         densityhnn = DensityHNN.base_architecture(
             input_shape, hemisphere_outputs=1, 
             vol_emphasis=tf.constant(volatility_emphasis, dtype=tf.float32)
             )
+        # custom trainer
         hnn_trainer = Trainer(
             optimizer = keras.optimizers.Adam(self.learning_rate),
             loss      = GaussianLogLikelihood(),
             metrics   = None,
             n_trainings=self.bootstraps,
         )
-        self.ensemble_hnn = DeepEnsemble(
+        self.ensemble_hnn = DeepEnsemble( # wrap in ensemble.
             n_estimators=self.bootstraps,
             network = densityhnn,
             trainer = hnn_trainer,
             sampler = self.__sampler
-            )
+        )
         self.ensemble_hnn.fit(
             X_train, y_train, epochs=self.epochs,
             early_stopping=callbacks[0],
@@ -663,33 +657,34 @@ class DensityHNN(object):
             validation_batch_size=None,
             verbose=self.verbose
             )
+        # make prediction
         mean_preds, vol_preds = self.ensemble_hnn.predict(
             X_full, batch_size=X_full.shape[0], verbose=0
-            )
-
+        )
+        # gather and create bluprints for out-of-bag forecasts.
         oob_idx = self.ensemble_hnn.oob_indices
         oob_predictor = OutOfBagPredictor(oob_idx)
-        
-        hnn_mean_oob = oob_predictor(mean_preds[:len(y_train)],
-                                     sampling_rate=self.sampling_rate)
-        hnn_mean_oos = np.mean(mean_preds[len(y_train):], axis=-1)
+        hnn_mean_oob = oob_predictor(np.copy(mean_preds[:len(y_train)]),
+                                     sampling_rate=self.sampling_rate)        
+        hnn_mean_oos = np.mean(np.copy(mean_preds[len(y_train):]), axis=-1)
         hnn_mean = np.concatenate([hnn_mean_oob, hnn_mean_oos], axis=0)
-        hnn_mean = pd.DataFrame(hnn_mean, columns=["conditional_mean"],
-                                index=pred_idx)
-        hnn_mean = scaler.unscale(hnn_mean, self.target,
-                                         use_mean=True)
-        
-        hnn_vol_oob = oob_predictor(vol_preds[:len(y_train)],
+    
+        hnn_mean = scaler.unscale(
+            pd.DataFrame(hnn_mean, columns=["conditional_mean"], index=pred_idx),
+            self.target, use_mean=True
+        )
+        hnn_vol_oob = oob_predictor(np.copy(vol_preds[:len(y_train)]),
                                     sampling_rate=self.sampling_rate)
-        hnn_vol_oos = np.mean(vol_preds[len(y_train):], axis=-1)
+        hnn_vol_oos = np.mean(np.copy(vol_preds[len(y_train):]), axis=-1)
         hnn_vol = np.concatenate([hnn_vol_oob, hnn_vol_oos], axis=0)
-        hnn_vol = pd.DataFrame(hnn_vol, columns=["conditional_vol"],
-                                index=pred_idx)
-        hnn_vol = scaler.unscale(hnn_vol, self.target,
-                                         use_mean=False)
+        hnn_vol = scaler.unscale(
+            pd.DataFrame(hnn_vol, columns=["conditional_vol"], index=pred_idx),
+            self.target, use_mean=False
+        )
         hnn_preds = pd.concat([hnn_mean, hnn_vol], axis=1)
         hnn_preds.columns =["conditional_mean", "conditional_vol"]
         hnn_preds.index = pred_idx
+                       
         # rescaling the volatility
         hnn_preds["conditional_vol"] = DensityHNN.volatility_rescaling_algorithm(
                                 y_true    = data[[self.target]],
