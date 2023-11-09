@@ -493,7 +493,7 @@ class DensityHNN(object):
                     "dnn_forecast"]
                 hnn_rolling_outputs[f"{oos.index[0]}"] = window_results[
                     "hnn_forecast"]
-                vol_emphasis["f{oos.index[0]}"] = window_results[
+                vol_emphasis[f"{oos.index[0]}"] = window_results[
                     "volatility_emphasis"]
                 
             dnn_forecast = pd.DataFrame(columns=["dnn_forecast"],
@@ -622,18 +622,21 @@ class DensityHNN(object):
                                    verbose=0)
         oob_idx = ensemble_dnn.oob_indices
         oob_predictor = OutOfBagPredictor(oob_idx)
-        dnn_oob = oob_predictor(dnn_prediction[:len(y_train)],
+        dnn_oob = oob_predictor(np.copy(dnn_prediction[:len(y_train)]),
                                 sampling_rate=self.sampling_rate)
-        dnn_oos = np.mean(dnn_prediction[len(y_train):], axis=-1)
+        dnn_oos = np.mean(np.copy(dnn_prediction[len(y_train):]), axis=-1)
         dnn_forecast = np.concatenate([dnn_oob, dnn_oos], axis=0)
     
         # compute volatility emphasis using the MSE on the out-of-bag forecast.
         volatility_emphasis = mean_squared_error(dnn_oob, np.squeeze(y_train))
         
-        dnn_pred = pd.DataFrame(dnn_forecast, columns=["forecast"],
-                                index=pred_idx)
-        dnn_pred = scaler.unscale(dnn_pred, target=self.target,
-                                         use_mean=True)
+        dnn_pred = scaler.unscale(
+            pd.DataFrame(dnn_forecast,
+                         columns=["forecast"],
+                         index=pred_idx),
+            target=self.target,
+            use_mean=True
+        )
         # the prior dnn estimation is over. 
         # Now I clear the session and start estimating the HNN.
         # Also note that tf.keras.backend.clear_session() is called between each
@@ -670,23 +673,27 @@ class DensityHNN(object):
         oob_idx = self.ensemble_hnn.oob_indices
         oob_predictor = OutOfBagPredictor(oob_idx)
         
-        hnn_mean_oob = oob_predictor(mean_preds[:len(y_train)],
+        hnn_mean_oob = oob_predictor(np.copy(mean_preds[:len(y_train)]),
                                      sampling_rate=self.sampling_rate)
-        hnn_mean_oos = np.mean(mean_preds[len(y_train):], axis=-1)
+                       
+        hnn_mean_oos = np.mean(np.copy(mean_preds[len(y_train):]), axis=-1)
+                       
         hnn_mean = np.concatenate([hnn_mean_oob, hnn_mean_oos], axis=0)
-        hnn_mean = pd.DataFrame(hnn_mean, columns=["conditional_mean"],
-                                index=pred_idx)
-        hnn_mean = scaler.unscale(hnn_mean, self.target,
-                                         use_mean=True)
+    
+        hnn_mean = scaler.unscale(
+            pd.DataFrame(hnn_mean,
+                         columns=["conditional_mean"],
+                         index=pred_idx), self.target, use_mean=True
+        )
         
-        hnn_vol_oob = oob_predictor(vol_preds[:len(y_train)],
+        hnn_vol_oob = oob_predictor(np.copy(vol_preds[:len(y_train)]),
                                     sampling_rate=self.sampling_rate)
-        hnn_vol_oos = np.mean(vol_preds[len(y_train):], axis=-1)
+        hnn_vol_oos = np.mean(np.copy(vol_preds[len(y_train):]), axis=-1)
         hnn_vol = np.concatenate([hnn_vol_oob, hnn_vol_oos], axis=0)
-        hnn_vol = pd.DataFrame(hnn_vol, columns=["conditional_vol"],
-                                index=pred_idx)
-        hnn_vol = scaler.unscale(hnn_vol, self.target,
-                                         use_mean=False)
+        hnn_vol = scaler.unscale(
+            pd.DataFrame(hnn_vol, columns=["conditional_vol"], index=pred_idx),
+            self.target, use_mean=False
+        )
         hnn_preds = pd.concat([hnn_mean, hnn_vol], axis=1)
         hnn_preds.columns =["conditional_mean", "conditional_vol"]
         hnn_preds.index = pred_idx
