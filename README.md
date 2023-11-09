@@ -3,17 +3,7 @@
 ![MIT License](https://img.shields.io/badge/license-MIT-yellow.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 
-This repository contains code and resources for Time Series forecast and analysis using Machine Learning and Deep Learning and is available under the MIT license. 
-
-## Features
-
-- Machine Learning and Deep Learning models for time series.
-- Easy-to-use examples with [Scikit-Learn](https://scikit-learn.org/stable/), [Keras](https://keras.io/) and eventually [PyTorch](https://pytorch.org/).
-- Only four dependencies:
-    - [NumPy](https://numpy.org/) : The fundamental package for scientific computing in Python.
-    - [Pandas](https://pandas.pydata.org/) : An open-source data analysis and manipulation library.
-    - [TensorFlow](https://www.tensorflow.org/) : An open-source deep learning framework.
-    - [Scikit-Learn](https://scikit-learn.org/stable/) : An open-source machine learning framework.
+This repository contains codes, resources and models for Time Series forecasting and analysis using Machine Learning and Deep Learning
  
 ## Models
 
@@ -29,6 +19,8 @@ After estimation, the model is capable of producing conditional forecasts along 
     <img src="https://github.com/TheAionxGit/Aionx/blob/main/images/GDP_S1.png" alt="GDP S1" width="600"/>.
 </div>
 
+A simple usage tutorial for the density hemisphere neural network is available here [example](examples/DensityHNN_tutorial1.ipynb).
+
 ## Getting Started
 
 1. Clone this repository:
@@ -43,7 +35,7 @@ After estimation, the model is capable of producing conditional forecasts along 
     pip install -r requirements.txt
     ```
 
-3. (TODO) explore the example notebooks in the `examples/` directory to get started.
+3. (TODO) explore the example notebooks in the [Link to Tutorial Notebook](examples/tutorial_notebook.ipynb) directory to get started.
 
 ## Usage
 
@@ -51,7 +43,10 @@ This repository provides a simple and flexible framework for time series analysi
 
 ## Dependencies
 
-You can install them using the following command:
-
+- [NumPy](https://numpy.org/) : The fundamental package for scientific computing in Python.
+- [Pandas](https://pandas.pydata.org/) : An open-source data analysis and manipulation library.
+- [TensorFlow](https://www.tensorflow.org/) : An open-source deep learning framework.
+- [Scikit-Learn](https://scikit-learn.org/stable/) : An open-source machine learning framework.
+      
 ```bash
 pip install numpy pandas==2.0.0 tensorflow scikit-learn
