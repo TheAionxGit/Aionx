@@ -570,9 +570,6 @@ class DensityHNN(object):
             block_size=self.block_size,
             replace=True
         )
-
-        # build prior fully connected network
-        prior_dnn = DensityHNN.prior_dnn_architecture(input_shape)
     
         pred_idx = pd.date_range(
             data.index[0+self.lags+self.horizon-1],
