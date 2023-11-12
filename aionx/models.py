@@ -15,7 +15,7 @@ The module contains:
 import tensorflow as tf
 from tensorflow import keras
 from keras.models import Sequential, Model
-from keras.initializers import RandomNormal
+from keras.initializers import RandomNormal, he_uniform
 from keras.layers import Flatten, Dense, Input, Dropout
 import numpy as np
 from datetime import datetime
@@ -27,10 +27,10 @@ from sklearn.linear_model import LinearRegression
 from aionx.scalers import StandardScaler
 from aionx.pipelines import WindowDataset
 from aionx.kerasnn.trainers import Trainer
-from aionx.utils import (add_trends, WindowEstimationHandler)
+from aionx.utils import (add_trends, ExpandingWindowGenerator)
 from aionx.bootstrap import TimeSeriesBlockBootstrap
 from aionx.kerasnn.ensemble import DeepEnsemble, OutOfBagPredictor
-from aionx.kerasnn.losses import GaussianLogLikelihood
+from aionx.kerasnn.losses import GaussianLogLikelihood, InflationHNN
 
 import warnings
 
@@ -906,10 +906,7 @@ class InflationHNN(object):
                 periods=len(dataset[0])-self.lags+1,
                 freq=pd.infer_freq(dataset[0].index)
             )
-
             hnn_rolling_outputs = {}
-            vol_emphasis        = {}
-            
             # main estimation loop.
             for step, train, poos in windows:
 
@@ -1044,14 +1041,6 @@ class InflationHNN(object):
         callbacks = [keras.callbacks.EarlyStopping(
             monitor="val_loss", patience=self.patience)]
 
-        # custom trainer
-        trainer = Trainer(
-            optimizer = keras.optimizers.Adam(self.learning_rate),
-            loss      = keras.losses.MeanSquaredError(),
-            metrics   = None,
-            n_trainings = self.bootstraps
-        )            
-        model = build_model()
         # instantiate and fit
         ensemble_model = DeepEnsemble.from_function( # wrap into a deep ensemble.
             n_estimators=self.bootstraps,
