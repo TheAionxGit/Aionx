@@ -106,6 +106,7 @@ class TrainerGenerator:
 
         # Check if the provided trainer is an function
         self.isfunction = callable(self.trainer)
+        self.is_none = self.trainer == None
         
     def __iter__(self):
         return self
@@ -116,6 +117,8 @@ class TrainerGenerator:
                 trainer = self.trainer()
                 self.current += 1
                 return trainer
+            elif self.is_none:
+                return None
             else:
                 return self.trainer
         else:
@@ -196,6 +199,10 @@ class DeepEnsemble:
             model = self.network,
             n_estimators=self._n_estimators
             )
+        self.trainer_generator = TrainerGenerator(
+            trainer = self.trainer,
+            n_estimators=self._n_estimators
+        )
         
         self._sampler = sampler
         
@@ -285,6 +292,7 @@ class DeepEnsemble:
         for e, model in enumerate(self.model_generator):
             keras.backend.clear_session()
             X_train, y_train, X_val, y_val = next(self._sampler)
+            trainer = next(self.trainer_generator)
 
             if self._trainer is not None:
                 self._trainer.train(
