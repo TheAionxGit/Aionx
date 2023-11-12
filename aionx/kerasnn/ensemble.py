@@ -92,6 +92,34 @@ class ModelGenerator:
                 return model
         else:
             raise StopIteration
+
+class TrainerGenerator:
+    """
+
+    """
+
+    def __init__(self, trainer: knnbase.NetworkTrainer, n_estimators: int = 100):
+
+        self.trainer = trainer
+        self.n_estimators = n_estimators
+        self.current = 0
+
+        # Check if the provided trainer is an function
+        self.isfunction = callable(self.trainer)
+        
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current < self.n_estimators:
+            if self.isfunction:
+                trainer = self.trainer()
+                self.current += 1
+                return trainer
+            else:
+                return self.trainer
+        else:
+            raise StopIteration
             
 class DeepEnsemble:
 
@@ -181,6 +209,7 @@ class DeepEnsemble:
     def from_function(cls,
                       n_estimators: int,
                       func: types.FunctionType,
+                      train_func: types.FunctionType,
                       sampler: base.Bootstrapper = None,
                       block_size: int = 8,
                       sampling_rate: float = 0.8,
@@ -259,10 +288,7 @@ class DeepEnsemble:
 
             if self._trainer is not None:
                 self._trainer.train(
-                    model,
-                    X_train,
-                    y_train,
-                    epochs=epochs,
+                    model, X_train, y_train, epochs=epochs,
                     validation_data=(X_val, y_val),
                     batch_size=batch_size,
                     validation_batch_size=validation_batch_size,
