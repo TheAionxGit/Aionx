@@ -709,4 +709,392 @@ class DensityHNN(object):
             return data
         
     
+class InflationHNN(object):
+    """
+    PARAMETERS
+    ----------
+    target           : The target variable name.
     
+    lags             : Number of lags used for each regressor provided.
+    
+    horizon          : The number of steps ahead to forecast. For example,
+                       if horizon=1, the network will be trained to predict
+                       y_{t+1} using y_{t-lags:t}.
+    
+    bootstraps       : Number of weak learners (estimators) to train. Their
+                       forecasts will be averaged out. The default is 200.
+    
+    prior_bootstraps : Number of weak learners to use for the prior DNN. This
+                       is used to compute the volatility emphasis parameter
+                       (estimating a prior for the importance of volatility).
+                       The default is 100.
+    
+    trends           : Number of trend regressors to include in the model.
+                       The default is 100.
+    
+    sampling_rate    : The fraction of data to use for training each epoch.
+                       The default is 0.8.
+    
+    block_size       : Size of blocks used for bootstrapping. The default is 8.
+    
+    epochs           : Number of training epochs. The default is 100.
+    
+    learning_rate    : Learning rate for training. The default is 1e-3.
+    
+    patience         : Number of epochs with no improvement after which
+                       training will stop early. The default is 15.
+    
+    shuffle          : Whether to shuffle the training data before each epoch.
+                       The default is False.
+    
+    verbose          : Verbosity mode (0, 1, or 2). The default is 1.
+    """
+    def __init__(self,
+                 target:str,
+                 lags:int,
+                 horizon:int,
+                 bootstraps:int=200,
+                 prior_bootstraps:int=100,
+                 trends:int=100,
+                 sampling_rate:float=0.8,
+                 block_size:int=8,
+                 epochs:int=100,
+                 learning_rate:float=1e-3,
+                 patience:int=15,
+                 verbose:int=1,
+                 )->None:
+        
+        # accessible attributes
+        self.target = target
+        self.lags = lags
+        self.horizon = horizon
+        self.bootstraps = bootstraps
+        self.prior_bootstraps = prior_bootstraps
+        self.trends = trends
+        self.epochs=epochs
+        self.sampling_rate = sampling_rate
+        self.block_size = block_size
+        self.learning_rate = learning_rate
+        self.patience = patience
+        self.verbose = verbose
+    
+    @staticmethod
+    def base_architecture(
+        activity_input_shape,
+        prices_input_shape,
+        LR_expectations_input_shape,
+        SR_expectations_input_shape
+        ):
+        
+        activity_beta = np.sqrt(activity_input_shape[-1])
+        prices_beta = np.sqrt(prices_input_shape[-1])
+        SR_beta = np.sqrt(LR_expectations_input_shape[-1])
+        LR_beta = np.sqrt(SR_expectations_input_shape[-1])
+        
+        activity_inputs = keras.layers.Input(shape=(activity_input_shape))
+        prices_inputs = keras.layers.Input(shape=(prices_input_shape))
+        LR_inputs = keras.layers.Input(shape=(LR_expectations_input_shape))
+        SR_inputs = keras.layers.Input(shape=(SR_expectations_input_shape))
+
+        activity_hemisphere = keras.models.Sequential([
+            ScalingLayer(beta=1/activity_beta),
+            Flatten(),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(1)
+        ])
+        prices_hemisphere = keras.models.Sequential([
+            ScalingLayer(beta=1/prices_beta),
+            Flatten(),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(1)
+        ])
+        SR_hemisphere = keras.models.Sequential([
+            ScalingLayer(beta=1/SR_beta),
+            Flatten(),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(1)
+        ])
+        LR_hemisphere = keras.models.Sequential([
+            ScalingLayer(beta=1/LR_beta),
+            Flatten(),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(units=400, activation="relu", kernel_initializer=he_uniform()),
+            Dropout(0.2),
+            Dense(1)
+        ])
+
+        activity_output = activity_hemisphere(activity_inputs)
+        prices_output = prices_hemisphere(prices_inputs)
+        SR_output = SR_hemisphere(SR_inputs)
+        LR_output = LR_hemisphere(LR_inputs)
+
+        output = tf.concat([activity_output, prices_output, SR_output, LR_output], axis=-1)
+
+        model = keras.models.Model(inputs=[activity_inputs, prices_inputs, LR_inputs, SR_inputs],
+                                  outputs=output)
+        model.compile(loss=InflationMSE(),
+                      optimizer=keras.optimizers.Adam(1e-3))
+        return model
+
+        
+    def run(self,
+              data:Union[pd.DataFrame, pd.Series],
+              train_start = Union[str, datetime],
+              train_end = Union[str, datetime],
+              expanding:bool=False,
+              expanding_start:Union[str, datetime]=None,
+              expanding_steps:int=8,
+              last_expanding_window:Union[str, datetime]=None
+              )->dict:
+        
+        """
+        PARAMETERS
+        ----------
+        data            : The input data to be used.
+        
+        train_start     : The starting date or timestamp for the training
+                          data.
+        
+        train_end       : The ending date or timestamp for the training
+                          data.
+        
+        expanding       : If True, use an expanding training window.
+                           Default is False.
+                    
+        expanding_start : The starting date or timestamp for the expanding
+                          training window.
+                          
+        expanding_steps : The number of steps to expand the training window.
+                          Only relevant when 'expanding' is True.
+                          Default is 8.
+                          
+        last_expanding_window : The end date or timestamp for the last
+                                expanding training window. Only relevant
+                                when 'expanding' is True.
+
+        """
+
+        # making sure the data respects the index constraints.
+        data = self._validate_dataset(data)
+
+        if expanding: # performs __static_fit() for each expanding window.
+            
+            dataset = (
+                data["real_activity_input"],
+                data["prices_input"],
+                data["sr_expectations_input"],
+                data["lr_expectations_input"]
+            )
+
+            windows = ExpandingWindowGenerator(dataset,
+                                              expanding_start=expanding_start,
+                                              last_window=last_expanding_window,
+                                              timesteps=expanding_steps,
+                                              verbose=self.verbose)
+            pred_idx = pd.date_range(
+                dataset[0].index[0+self.lags+self.horizon-1],
+                periods=len(dataset[0])-self.lags+1,
+                freq=pd.infer_freq(dataset[0].index)
+            )
+
+            hnn_rolling_outputs = {}
+            vol_emphasis        = {}
+            
+            # main estimation loop.
+            for step, train, poos in windows:
+
+                train_start_idx, train_end_idx = train[0].index[0], train[0].index[-1]
+                test_start_idx, test_end_idx = poos[0].index[0], poos[0].index[-1]
+                
+                window_results = self._static_fit(data,
+                                                  train_start = train_start_idx,
+                                                  train_end = train_end_idx)   
+                hnn_rolling_outputs[f"{test_start_idx}"] = window_results["components"]
+                
+            hnn_forecasts = pd.DataFrame(columns=["real_activity",
+                                                 "prices", "short_run_expectations",
+                                                 "long_run_expectations"],
+                                        index=pred_idx) 
+            for i, (step, output) in enumerate(hnn_rolling_outputs.items()):
+                if i == 0:
+                    hnn_forecasts.loc[
+                        :train_end, "real_activity"] = output.loc[
+                            :train_end, "real_activity"]
+                    hnn_forecasts.loc[
+                        :train_end, "prices"] = output.loc[
+                            :train_end, "prices"]
+                    hnn_forecasts.loc[
+                        :train_end, "short_run_expectations"] = output.loc[
+                            :train_end, "short_run_expectations"]
+                    hnn_forecasts.loc[
+                        :train_end, "long_run_expectations"] = output.loc[
+                            :train_end, "long_run_expectations"]
+                    
+                hnn_forecasts.loc[
+                    step:, "real_activity"] = output.loc[
+                        step:, "real_activity"]
+                hnn_forecasts.loc[
+                    step:, "prices"] = output.loc[
+                        step:, "prices"]
+                hnn_forecasts.loc[
+                    step:, "short_run_expectations"] = output.loc[
+                        step:, "short_run_expectations"]
+                hnn_forecasts.loc[
+                    step:, "long_run_expectations"] = output.loc[
+                        step:, "long_run_expectations"]
+                
+            hnn_forecasts = hnn_forecasts.astype("float32")
+                    
+            # the resulting dict.
+            results = {"components":hnn_forecasts}
+        else:
+            results = self._static_fit(data, train_start=train_start, 
+                                      train_end=train_end)
+        return results
+    
+    
+    
+    def _static_fit(self,
+                   data:Union[pd.DataFrame, pd.Series],
+                   train_start:Union[str, datetime],
+                   train_end:Union[str, datetime]
+                    ):
+
+        scalers, input_dict = [], {}
+        Xs_train, ys_train, Xs_full, ys_full = [], [], [], []
+        for hemisphere, inputs in data.items():
+            scaler = StandardScaler()
+            scaler.get_stats(inputs.loc[train_start:train_end])
+            full_scaled = scaler.scale(inputs)
+            train_scaled = full_scaled.loc[:train_end] 
+
+            if self.target in inputs.columns:
+                pipe = WindowDataset(targets=[self.target], in_steps=self.lags, horizon=self.horizon,
+                                     sampler=None)
+                X_train, y_train = pipe(train_scaled)
+                full_pipe = WindowDataset(targets=None, in_steps=self.lags, horizon=0, out_steps=0,
+                                          sampler=None)
+                X_full, _ = full_pipe(full_scaled)
+                Xs_train.append(X_train)
+                ys_train.append(y_train)
+                Xs_full.append(X_full)
+
+            else:
+                pipe = WindowDataset(targets=None, in_steps=self.lags, horizon=self.horizon,
+                                     sampler=None)
+                X_train, _ = pipe(train_scaled)
+                full_pipe = WindowDataset(targets=None, in_steps=self.lags, horizon=0,
+                                          out_steps=0, sampler=None)
+                X_full, _ = full_pipe(full_scaled)
+                Xs_train.append(X_train)
+                Xs_full.append(X_full)
+                
+            input_dict[hemisphere] = X_train
+            scalers.append(scaler)
+
+        X_train, y_train = tuple(Xs_train), tuple(ys_train)
+        X_full = tuple(Xs_full)
+        # instantiate sampler
+        self.__sampler = TimeSeriesBlockBootstrap(
+            X=X_train, y=y_train,
+            sampling_rate=self.sampling_rate,
+            block_size=self.block_size,
+            replace=True
+        )
+
+        def build_model():
+            # build prior fully connected network
+            model = InflationHNN.base_architecture(
+                activity_input_shape = input_dict["real_activity_input"].shape[1:], 
+                prices_input_shape = input_dict["prices_input"].shape[1:], 
+                LR_expectations_input_shape = input_dict["sr_expectations_input"].shape[1:], 
+                SR_expectations_input_shape = input_dict["lr_expectations_input"].shape[1:]
+            )
+            return model
+        
+        def build_trainer():
+            trainer = Trainer(
+            optimizer = keras.optimizers.Adam(self.learning_rate),
+            loss      = keras.losses.MeanSquaredError(),
+            metrics   = None,
+            n_trainings = self.bootstraps
+            )
+            return trainer 
+            
+        
+        pred_idx = pd.date_range(
+            data["prices_input"].index[0+self.lags+self.horizon-1],
+            periods=len(data["prices_input"])-self.lags+1,
+            freq=pd.infer_freq(data["prices_input"].index)
+            )
+        tf.keras.backend.clear_session() # this is important so we do not
+        # get overlapping graphs or tensorflow session during estimations.
+
+        # only one tensorflow callback is used for the model.
+        callbacks = [keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=self.patience)]
+
+        # custom trainer
+        trainer = Trainer(
+            optimizer = keras.optimizers.Adam(self.learning_rate),
+            loss      = keras.losses.MeanSquaredError(),
+            metrics   = None,
+            n_trainings = self.bootstraps
+        )            
+        model = build_model()
+        # instantiate and fit
+        ensemble_model = DeepEnsemble.from_function( # wrap into a deep ensemble.
+            n_estimators=self.bootstraps,
+            func = build_model,
+            trainer_func = build_trainer,
+            sampler = self.__sampler
+            )
+        ensemble_model.fit(
+            X_train, y_train, epochs=self.epochs,
+            early_stopping=callbacks[0],
+            batch_size=len(X_train[0]),
+            validation_batch_size=None,
+            verbose=self.verbose
+            )               
+        # By default, the predict method will return all estimators forecasts.
+        prediction = ensemble_model.predict(X_full, verbose=0)
+        # gather and create bluprints for out-of-bag forecasts.
+        oob_idx = ensemble_model.oob_indices
+        oob_predictor = OutOfBagPredictor(oob_idx)
+        
+        forecasts = pd.DataFrame(index=pred_idx)
+        
+        for i, keys in enumerate(
+            ("real_activity", "prices", "short_run_expectations", "long_run_expectations")
+        ):
+            
+            oob_forecast = oob_predictor( np.copy(prediction[i][:len(y_train[0])]) )
+            oos_forecast = np.mean( np.copy(prediction[i][len(y_train[0]):]), axis=-1)
+
+            forecast = np.concatenate([oob_forecast, oos_forecast], axis=0)
+            forecast = pd.DataFrame(forecast, columns=["forecast"],
+                                   index=pred_idx)
+            forecasts[keys] = forecast
+            
+        return {"components":forecasts}
+    
+    def _validate_dataset(self, data):
+        for _, df in data.items():
+            try: 
+                pd.infer_freq(df.index)
+            except TypeError:
+                raise ValueError("Pandas cannot infer frequency from the provided "+
+                                 "data's index. Please make sure that your data "+
+                                 "has a valid datetime index. See panda's " +
+                                 "documentation for more information.")    
+        return data
