@@ -181,7 +181,7 @@ class NetworkTrainer(object):
             X_val, y_val = validation_data
             
             if validation_batch_size is None:
-                validation_batch_size = X_val.shape[0]
+                validation_batch_size = X_val[0].shape[0] if isinstance(X_val, tuple) else X_val.shape[0]
 
             val_configurer = TensorFlowDatasetConfigurer(
                 batch_size=validation_batch_size,
