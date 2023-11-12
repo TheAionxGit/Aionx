@@ -7,6 +7,8 @@ The module contains:
         A class implementation of the model proposed in
         'From Reactive to Proactive Volatility Modeling with
         Hemisphere Neural Networks' by Goulet-Coulombe (2023).
+        
+        
 """
 
 # Author: Mikael Frenette (mik.frenette@gmail.com)
@@ -30,9 +32,19 @@ from aionx.kerasnn.trainers import Trainer
 from aionx.utils import (add_trends, ExpandingWindowGenerator)
 from aionx.bootstrap import TimeSeriesBlockBootstrap
 from aionx.kerasnn.ensemble import DeepEnsemble, OutOfBagPredictor
-from aionx.kerasnn.losses import GaussianLogLikelihood, InflationHNN
+from aionx.kerasnn.losses import GaussianLogLikelihood, InflationMSE
 
 import warnings
+
+  
+    
+class ScalingLayer(keras.layers.Layer):
+    def __init__(self, beta, **kwargs):
+        super().__init__(**kwargs)
+        self.beta = beta
+    def call(self, X):
+        X = self.beta*X
+        return X
 
 class DensityHNN(object):
     """"
@@ -455,7 +467,7 @@ class DensityHNN(object):
         data = self._validate_dataset(data)
                   
         if expanding: # performs __static_fit() for each expanding window.
-            windows = WindowEstimationHandler(data,
+            windows = ExpandingWindowGenerator(data,
                                               expanding_start=expanding_start,
                                               last_window=last_expanding_window,
                                               timesteps=expanding_steps)
@@ -906,7 +918,9 @@ class InflationHNN(object):
                 periods=len(dataset[0])-self.lags+1,
                 freq=pd.infer_freq(dataset[0].index)
             )
+
             hnn_rolling_outputs = {}
+            
             # main estimation loop.
             for step, train, poos in windows:
 
@@ -1041,6 +1055,7 @@ class InflationHNN(object):
         callbacks = [keras.callbacks.EarlyStopping(
             monitor="val_loss", patience=self.patience)]
 
+      
         # instantiate and fit
         ensemble_model = DeepEnsemble.from_function( # wrap into a deep ensemble.
             n_estimators=self.bootstraps,
