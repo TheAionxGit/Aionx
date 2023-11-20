@@ -233,8 +233,8 @@ class DeepEnsemble:
                  n_estimators: int,
                  network: Union[tf.keras.models.Model,
                                 List[tf.keras.models.Model]],
-                 trainer : knnbase.trainer = None,
-                 sampler : base.bootstraper = None,
+                 trainer: knnbase.NetworkTrainer = None,
+                 sampler: base.Bootstrapper = None,
                  block_size: int = 8,
                  sampling_rate: float = 0.8,
                  replace: bool = True) -> None:
@@ -270,7 +270,7 @@ class DeepEnsemble:
                       n_estimators: int,
                       func: types.FunctionType,
                       trainer_func: types.FunctionType,
-                      sampler = None,
+                      sampler: base.Bootstrapper = None,
                       block_size: int = 8,
                       sampling_rate: float = 0.8,
                       replace: bool = True):
