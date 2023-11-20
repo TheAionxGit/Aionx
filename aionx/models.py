@@ -36,7 +36,6 @@ from aionx.kerasnn.losses import GaussianLogLikelihood, InflationMSE
 
 import warnings
 
-  
     
 class ScalingLayer(keras.layers.Layer):
     def __init__(self, beta, **kwargs):
@@ -470,7 +469,7 @@ class DensityHNN(object):
             windows = ExpandingWindowGenerator(data,
                                               expanding_start=expanding_start,
                                               last_window=last_expanding_window,
-                                              timesteps=expanding_steps)
+                                              timesteps=expanding_steps, verbose=self.verbose)
             pred_idx = pd.date_range(
                 data.index[0+self.lags+self.horizon-1],
                 periods=len(data)-self.lags+1,
@@ -481,24 +480,15 @@ class DensityHNN(object):
             vol_emphasis        = {}
             
             # main estimation loop.
-            for step, (train, oos) in enumerate(windows):
-                if self.verbose > 0:
-                    print(" ")
-                    print(
-                        f"Expanding[{step+1}/{len(windows)}] : \n", 
-                        f"    Estimation start: {train.index[0].strftime('%Y-%m-%d')}",
-                        f" - Estimation end: {train.index[-1].strftime('%Y-%m-%d')}"
-                        )
-                    print(" ")
-                
+            for step, train, poos in windows:
                 window_results = self._static_fit(data,
                                                   train_start = train.index[0],
                                                   train_end = train.index[-1])   
-                dnn_rolling_outputs[f"{oos.index[0]}"] = window_results[
+                dnn_rolling_outputs[f"{poos.index[0]}"] = window_results[
                     "dnn_forecast"]
-                hnn_rolling_outputs[f"{oos.index[0]}"] = window_results[
+                hnn_rolling_outputs[f"{poos.index[0]}"] = window_results[
                     "hnn_forecast"]
-                vol_emphasis[f"{oos.index[0]}"] = window_results[
+                vol_emphasis[f"{poos.index[0]}"] = window_results[
                     "volatility_emphasis"]
                 
             dnn_forecast = pd.DataFrame(columns=["dnn_forecast"],
@@ -600,7 +590,6 @@ class DensityHNN(object):
             optimizer = keras.optimizers.Adam(self.learning_rate),
             loss      = keras.losses.MeanSquaredError(),
             metrics   = None,
-            n_trainings = self.prior_bootstraps
         )
                        
         # instantiate and fit
@@ -651,7 +640,6 @@ class DensityHNN(object):
             optimizer = keras.optimizers.Adam(self.learning_rate),
             loss      = GaussianLogLikelihood(),
             metrics   = None,
-            n_trainings=self.bootstraps,
         )
         self.ensemble_hnn = DeepEnsemble( # wrap in ensemble.
             n_estimators=self.bootstraps,
@@ -719,7 +707,6 @@ class DensityHNN(object):
                              "documentation for more information.")
         else:
             return data
-        
     
 class InflationHNN(object):
     """
@@ -854,8 +841,7 @@ class InflationHNN(object):
 
         model = keras.models.Model(inputs=[activity_inputs, prices_inputs, LR_inputs, SR_inputs],
                                   outputs=output)
-        model.compile(loss=InflationMSE(),
-                      optimizer=keras.optimizers.Adam(1e-3))
+
         return model
 
         
@@ -1036,9 +1022,8 @@ class InflationHNN(object):
         def build_trainer():
             trainer = Trainer(
             optimizer = keras.optimizers.Adam(self.learning_rate),
-            loss      = keras.losses.MeanSquaredError(),
+            loss      = InflationMSE(),
             metrics   = None,
-            n_trainings = self.bootstraps
             )
             return trainer 
             
