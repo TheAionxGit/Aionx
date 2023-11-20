@@ -233,14 +233,14 @@ class DeepEnsemble:
                  n_estimators: int,
                  network: Union[tf.keras.models.Model,
                                 List[tf.keras.models.Model]],
-                 trainer: knnbase.NetworkTrainer = None,
-                 sampler: base.Bootstrapper = None,
+                 trainer : knnbase.trainer = None,
+                 sampler : base.bootstraper = None,
                  block_size: int = 8,
                  sampling_rate: float = 0.8,
                  replace: bool = True) -> None:
 
         self._n_estimators = n_estimators
-        self._trainer = trainer
+        self.trainer = trainer
         self.network = network
         self.block_size = block_size
         self.sampling_rate = sampling_rate
@@ -254,7 +254,9 @@ class DeepEnsemble:
             trainer = self.trainer,
             n_estimators=self._n_estimators
         )
-        
+        self.factory = EstimationFactory(
+            self.model_generator, self.trainer_generator
+        )
         self._sampler = sampler
         
         # out of bag indices will be stored here
@@ -267,8 +269,8 @@ class DeepEnsemble:
     def from_function(cls,
                       n_estimators: int,
                       func: types.FunctionType,
-                      train_func: types.FunctionType,
-                      sampler: base.Bootstrapper = None,
+                      trainer_func: types.FunctionType,
+                      sampler = None,
                       block_size: int = 8,
                       sampling_rate: float = 0.8,
                       replace: bool = True):
@@ -295,7 +297,7 @@ class DeepEnsemble:
             None
         """
 
-        return cls(n_estimators, func, None, sampler, block_size, sampling_rate)
+        return cls(n_estimators, func, trainer_func, sampler, block_size, sampling_rate)
     
     
     @timeit
@@ -340,17 +342,17 @@ class DeepEnsemble:
                 sampling_rate=self.sampling_rate, replace=True
             )
         
-        for e, model in enumerate(self.model_generator):
+        for e, (model, trainer) in enumerate(self.factory):           
             keras.backend.clear_session()
             X_train, y_train, X_val, y_val = next(self._sampler)
-            trainer = next(self.trainer_generator)
 
-            if self._trainer is not None:
-                self._trainer.train(
+            if trainer is not None:
+                trainer.train(
                     model, X_train, y_train, epochs=epochs,
                     validation_data=(X_val, y_val),
                     batch_size=batch_size,
                     validation_batch_size=validation_batch_size,
+                    logger_description = f"[{e+1}/{self._n_estimators}]",
                     **tfkwargs
                     )
                 if verbose>1:
@@ -423,8 +425,6 @@ class DeepEnsemble:
     @property
     def estimators(self):
         return self._estimators
-
-
 
 class OutOfBagPredictor(object):
     """
