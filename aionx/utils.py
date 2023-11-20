@@ -61,9 +61,6 @@ def add_trends(data: pd.DataFrame, trends: int) -> pd.DataFrame:
     
     return data
 
-
-
-
 class ExpandingWindowGenerator:
     """
     DESCRIPTION
@@ -105,21 +102,24 @@ class ExpandingWindowGenerator:
                  last_window:Union[str, datetime],
                  verbose:int=0) -> None:
 
-        self.data = data
         self.expanding_start=expanding_start
         self.timesteps = timesteps
         self.last_window = last_window
         self.verbose=verbose
         self._it = 0    
+        
+        self.data = data
+        if not isinstance(self.data, tuple):
+            self.data = (self.data,)
 
         if isinstance(self.last_window, str):
             self.last_window = datetime.strptime(self.last_window, "%Y-%m-%d")
         if isinstance(self.expanding_start, str):
             self.expanding_start = datetime.strptime(self.expanding_start, "%Y-%m-%d")
-        self.starting_idx = len(self.data.loc[
-            :self.data.index[self.data.index < self.expanding_start].max()
+        self.starting_idx = len(self.data[0].loc[
+            :self.data[0].index[self.data[0].index < self.expanding_start].max()
         ])  
-        self.max_it = len(self.data.loc[self.expanding_start:self.last_window]) / self.timesteps
+        self.max_it = len(self.data[0].loc[self.expanding_start:self.last_window]) / self.timesteps
         
     def __iter__(self):
         return self
@@ -134,12 +134,21 @@ class ExpandingWindowGenerator:
             
     def __next__(self):           
         self.__update_state()
-        train_slice = self.data.iloc[self._start_point:self._end_point]
-        poos_slice  = self.data.iloc[self._end_point:]
+        train_slice = [self.data[i].iloc[
+            self._start_point:self._end_point] for i in range(len(self.data))]
+        
+        poos_slice  = [
+            self.data[i].iloc[self._end_point:] for i in range(len(self.data))]
+        
+        if len(train_slice) == 1:
+            train_slice=train_slice[0]
+        if len(poos_slice) == 1:
+            poos_slice=poos_slice[0]
+        
         if self.verbose == 1:
             print(f"Expanding[{self._it}/{int(self.max_it)}]")
         if self.verbose > 1:
             print(f"Expanding[{self._it}/{int(self.max_it)}] : \n", 
-                    f"    Estimation start: {train_slice.index[0].strftime('%Y-%m-%d')}",
-                    f" - Estimation end: {train_slice.index[-1].strftime('%Y-%m-%d')}") 
+                    f"    Estimation start: {train_slice[0].index[0].strftime('%Y-%m-%d')}",
+                    f" - Estimation end: {train_slice[0].index[-1].strftime('%Y-%m-%d')}") 
         return self._it, train_slice, poos_slice
