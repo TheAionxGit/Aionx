@@ -95,8 +95,29 @@ class ModelGenerator:
 
 class TrainerGenerator:
     """
-
+    Author: Mikael Frenette
+    
+    DESCRIPTION
+    ---------------------------------------------------------------------------
+    A generator class for efficiently storing trainers. 
+    ---------------------------------------------------------------------------
+    
+    PARAMETERS
+    ----------
+    trainer        : The trainer or a callable function that generates the
+                     trainer.
+    
+    n_estimators : The number of trainers to generate.
+    
+    USAGE
+    -----
+    generator = TrainerGenerator(trainer, n_estimators=100)
+    for i, generated_trainer in enumerate(generator):
+        # ... your code here
+    
+    ---------------------------------------------------------------------------
     """
+
 
     def __init__(self, trainer: knnbase.NetworkTrainer, n_estimators: int = 100):
 
@@ -123,6 +144,36 @@ class TrainerGenerator:
                 return self.trainer
         else:
             raise StopIteration
+            
+            
+class EstimationFactory:
+    """
+    Author: Mikael Frenette
+    
+    DESCRIPTION
+    ---------------------------------------------------------------------------
+    A generator class which generates pairs of models and trainers ready for 
+    training.
+    ---------------------------------------------------------------------------
+    
+    PARAMETERS
+    ----------
+    model   : A generator object which generates keras models.
+    trainer : A generator object which generates trainers.
+    
+    ---------------------------------------------------------------------------
+    """
+    def __init__(self, model:ModelGenerator, trainer:TrainerGenerator):
+        self.model_generator = model
+        self.trainer_generator = trainer
+        
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        model = next(self.model_generator)
+        trainer = next(self.trainer_generator)
+        return model, trainer
             
 class DeepEnsemble:
 
