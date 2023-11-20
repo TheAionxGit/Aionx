@@ -255,10 +255,9 @@ class Seq2SeqDataset(base.TimeSeriesDataset):
             y_train = np.stack([y for _, y in windows], axis=0)
                 
             if self.targets is None:
-                return [X_train, X_val]
+                return X_train
             else:
-                return [X_train, y_train, X_val, y_val]
-            
+                return [X_train, y_train]
             
             
 class RegressionMatrix(base.TimeSeriesDataset):
