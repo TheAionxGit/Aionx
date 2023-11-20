@@ -93,3 +93,37 @@ class GaussianLogLikelihood(tf.keras.losses.Loss):
                                                     
         # Return the computed loss as a double-precision float
         return tf.cast(loss, tf.double)  
+
+class InflationMSE(tf.keras.losses.Loss):
+    """
+    @Author: Mikael Frenette
+    
+    DESCRIPTION:
+    ---------------------------------------------------------------------------
+    This function computes the mean squared error (MSE) for the components
+    sum with the target values
+    ---------------------------------------------------------------------------
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs) # inherits from tensorflow.losses.Loss
+        self.MSE = tf.keras.losses.MeanSquaredError()
+        
+    @tf.function
+    def call(self, y_true: Union[tf.Tensor, np.ndarray],
+                    y_pred: Union[tf.Tensor, np.ndarray]):
+        """
+        PARAMETERS
+        ----------
+        y_true : The true target values, with a shape of (batch_size, num_outputs)
+                 or (batch_size, num_timesteps, num_outputs)
+                 in the case of sequence-to-sequence modeling.
+                
+        y_pred : The predicted target values, consisting of mean and volatility,
+                 each with a shape of (batch_size, num_outputs*2) or
+                 (batch_size, num_timesteps, num_outputs*2)
+                 in the case of sequence-to-sequence modeling.
+        """
+        
+        y_pred = tf.reduce_sum(y_pred, keepdims=True, axis=-1)
+        loss = self.MSE(y_true, y_pred)
+        return tf.cast(loss, tf.double)

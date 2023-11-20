@@ -20,7 +20,6 @@ from aionx.kerasnn.utils import (
     ProgressBar
     )
 
-
 class NetworkTrainer(object):
     """
     Author: Mikael Frenette
@@ -67,12 +66,10 @@ class NetworkTrainer(object):
                             List[tf.keras.losses.Loss]],
                  metrics:Union[tf.keras.metrics.Metric,
                                List[tf.keras.metrics.Metric]]=None,
-                 n_trainings:int=1,
                  )->None:
         
         self.optimizer = optimizer
         self.loss_fn = loss
-        self.n_trainings = n_trainings
         
         if isinstance(metrics, list):
             self.metrics = metrics
@@ -82,8 +79,7 @@ class NetworkTrainer(object):
             self.metrics = [metrics]
             
         self.logger = LogsTracker()
-        
-        self._model_trained = 0
+    
         
     @property
     def history(self):
@@ -105,6 +101,7 @@ class NetworkTrainer(object):
               verbose:int=1,
               early_stopping:tf.keras.callbacks.EarlyStopping=None,
               validation_batch_size:int=None,
+              logger_description:str=None,
               )->None:
         
         """
@@ -153,8 +150,7 @@ class NetworkTrainer(object):
         # this needs to be set to false for the early stopping
         self.model.stop_training=False
         
-        self._model_trained += 1
-        
+
         # get the shape input shape
         if isinstance(X, tuple):
             # look at first instance and compute the first and last dimension
@@ -181,7 +177,7 @@ class NetworkTrainer(object):
             X_val, y_val = validation_data
             
             if validation_batch_size is None:
-                validation_batch_size = X_val.shape[0]
+                validation_batch_size = X_val[0].shape[0] if isinstance(X_val, tuple) else X_val.shape[0]
 
             val_configurer = TensorFlowDatasetConfigurer(
                 batch_size=validation_batch_size,
@@ -196,7 +192,6 @@ class NetworkTrainer(object):
         progress_bar = ProgressBar(name=self.model.name,
                                    total_epochs=epochs,
                                    steps_per_epoch=num_batches)
-        
         
         # earlystopping requires on_train_begin() initialization.
         # see keras.callbacks documentations
@@ -217,9 +212,8 @@ class NetworkTrainer(object):
                 train_loss = train_loss / (train_step + 1)
                 self.logger["loss"] = train_loss
                 
-                
                 if verbose>0: # print out progress_bar
-                    progress_bar(f"[{self._model_trained}/{self.n_trainings}]",
+                    progress_bar(f"{logger_description}",
                                  epoch, train_step+1, self.logger.last_log())
                                    
             if validation_data is not None:
@@ -239,6 +233,8 @@ class NetworkTrainer(object):
                 early_stopping.on_epoch_end(epoch, self.logger.last_log())
                 if early_stopping.model.stop_training:
                     break # force training stop
+        
+    
                     
         
     

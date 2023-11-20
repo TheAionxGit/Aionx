@@ -92,6 +92,88 @@ class ModelGenerator:
                 return model
         else:
             raise StopIteration
+
+class TrainerGenerator:
+    """
+    Author: Mikael Frenette
+    
+    DESCRIPTION
+    ---------------------------------------------------------------------------
+    A generator class for efficiently storing trainers. 
+    ---------------------------------------------------------------------------
+    
+    PARAMETERS
+    ----------
+    trainer        : The trainer or a callable function that generates the
+                     trainer.
+    
+    n_estimators : The number of trainers to generate.
+    
+    USAGE
+    -----
+    generator = TrainerGenerator(trainer, n_estimators=100)
+    for i, generated_trainer in enumerate(generator):
+        # ... your code here
+    
+    ---------------------------------------------------------------------------
+    """
+
+
+    def __init__(self, trainer: knnbase.NetworkTrainer, n_estimators: int = 100):
+
+        self.trainer = trainer
+        self.n_estimators = n_estimators
+        self.current = 0
+
+        # Check if the provided trainer is an function
+        self.isfunction = callable(self.trainer)
+        self.is_none = self.trainer == None
+        
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.current < self.n_estimators:
+            if self.isfunction:
+                trainer = self.trainer()
+                self.current += 1
+                return trainer
+            elif self.is_none:
+                return None
+            else:
+                return self.trainer
+        else:
+            raise StopIteration
+            
+            
+class EstimationFactory:
+    """
+    Author: Mikael Frenette
+    
+    DESCRIPTION
+    ---------------------------------------------------------------------------
+    A generator class which generates pairs of models and trainers ready for 
+    training.
+    ---------------------------------------------------------------------------
+    
+    PARAMETERS
+    ----------
+    model   : A generator object which generates keras models.
+    trainer : A generator object which generates trainers.
+    
+    ---------------------------------------------------------------------------
+    """
+    def __init__(self, model:ModelGenerator, trainer:TrainerGenerator):
+        self.model_generator = model
+        self.trainer_generator = trainer
+        
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        model = next(self.model_generator)
+        trainer = next(self.trainer_generator)
+        return model, trainer
             
 class DeepEnsemble:
 
@@ -158,7 +240,7 @@ class DeepEnsemble:
                  replace: bool = True) -> None:
 
         self._n_estimators = n_estimators
-        self._trainer = trainer
+        self.trainer = trainer
         self.network = network
         self.block_size = block_size
         self.sampling_rate = sampling_rate
@@ -168,7 +250,13 @@ class DeepEnsemble:
             model = self.network,
             n_estimators=self._n_estimators
             )
-        
+        self.trainer_generator = TrainerGenerator(
+            trainer = self.trainer,
+            n_estimators=self._n_estimators
+        )
+        self.factory = EstimationFactory(
+            self.model_generator, self.trainer_generator
+        )
         self._sampler = sampler
         
         # out of bag indices will be stored here
@@ -181,6 +269,7 @@ class DeepEnsemble:
     def from_function(cls,
                       n_estimators: int,
                       func: types.FunctionType,
+                      trainer_func: types.FunctionType,
                       sampler: base.Bootstrapper = None,
                       block_size: int = 8,
                       sampling_rate: float = 0.8,
@@ -208,7 +297,7 @@ class DeepEnsemble:
             None
         """
 
-        return cls(n_estimators, func, None, sampler, block_size, sampling_rate)
+        return cls(n_estimators, func, trainer_func, sampler, block_size, sampling_rate)
     
     
     @timeit
@@ -253,19 +342,17 @@ class DeepEnsemble:
                 sampling_rate=self.sampling_rate, replace=True
             )
         
-        for e, model in enumerate(self.model_generator):
+        for e, (model, trainer) in enumerate(self.factory):           
             keras.backend.clear_session()
             X_train, y_train, X_val, y_val = next(self._sampler)
 
-            if self._trainer is not None:
-                self._trainer.train(
-                    model,
-                    X_train,
-                    y_train,
-                    epochs=epochs,
+            if trainer is not None:
+                trainer.train(
+                    model, X_train, y_train, epochs=epochs,
                     validation_data=(X_val, y_val),
                     batch_size=batch_size,
                     validation_batch_size=validation_batch_size,
+                    logger_description = f"[{e+1}/{self._n_estimators}]",
                     **tfkwargs
                     )
                 if verbose>1:
@@ -338,8 +425,6 @@ class DeepEnsemble:
     @property
     def estimators(self):
         return self._estimators
-
-
 
 class OutOfBagPredictor(object):
     """

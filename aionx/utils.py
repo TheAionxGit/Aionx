@@ -61,9 +61,7 @@ def add_trends(data: pd.DataFrame, trends: int) -> pd.DataFrame:
     
     return data
 
-
-
-class WindowEstimationHandler(object):
+class ExpandingWindowGenerator:
     """
     DESCRIPTION
     ---------------------------------------------------------------------------
@@ -81,6 +79,8 @@ class WindowEstimationHandler(object):
     timesteps       : The number of time steps in each window.
     
     last_window     : The index of the last window to consider.
+    
+    verbose         : the level of verbosity
 
     EXAMPLE
     -------
@@ -89,64 +89,66 @@ class WindowEstimationHandler(object):
                                         expanding_start=2007-01-01,
                                         timesteps = 12,
                                         last_window="2020-01-01")
-    for train, oos in expanding_window:
+    for step, train, oos in expanding_window:
         ...
         your code here
         ...
         
     """
-    def __init__(self, data:pd.DataFrame,
+    def __init__(self, 
+                 data:pd.DataFrame,
                  expanding_start:Union[str, datetime],
                  timesteps:int,
-                 last_window=Union[str, datetime]
-                 )->None:
-        
-        if isinstance(last_window, str):
-            last_window = datetime.strptime(last_window, "%Y-%m-%d")
+                 last_window:Union[str, datetime],
+                 verbose:int=0) -> None:
 
-        # protected attributes
-        self.data = data
+        self.expanding_start=expanding_start
         self.timesteps = timesteps
         self.last_window = last_window
+        self.verbose=verbose
+        self._it = 0    
+        
+        self.data = data
+        if not isinstance(self.data, tuple):
+            self.data = (self.data,)
 
-        # private attribute
-        self.expanding_start = expanding_start
-
-        # target values
-        self.estimation_blocs = []
-
-        # compute the number of expansions that will occur
-        n_training_periods = len(self.data.loc[:self.expanding_start])
-        n_oos_periods = len(self.data.loc[self.expanding_start:])
-        n_expansions = int(np.ceil(n_oos_periods / timesteps))
-
-        for expansion in range(n_expansions):
-            training_end_idx = n_training_periods + (
-                self.timesteps * expansion)
-            forecast_end_idx = n_training_periods + (
-                self.timesteps * (expansion + 1))
-
-            # Check if last_window is reached
-            if self.last_window is not None:
-                if self.data.iloc[training_end_idx, :].name > self.last_window:
-                    break
-                else:
-                    self.estimation_blocs.append(
-                        (
-                            self.data.iloc[:training_end_idx],
-                            self.data.iloc[training_end_idx:]
-                        )
-                    )
-            else:
-                self._estimation_blocs.append(
-                    (
-                        self.data.iloc[:training_end_idx],
-                        self.data.iloc[training_end_idx:]
-                    )
-                )
-
-    def __getitem__(self, idx):
-        return self.estimation_blocs[idx]
-
-    def __len__(self):
-        return len(self.estimation_blocs)
+        if isinstance(self.last_window, str):
+            self.last_window = datetime.strptime(self.last_window, "%Y-%m-%d")
+        if isinstance(self.expanding_start, str):
+            self.expanding_start = datetime.strptime(self.expanding_start, "%Y-%m-%d")
+        self.starting_idx = len(self.data[0].loc[
+            :self.data[0].index[self.data[0].index < self.expanding_start].max()
+        ])  
+        self.max_it = len(self.data[0].loc[self.expanding_start:self.last_window]) / self.timesteps
+        
+    def __iter__(self):
+        return self
+    
+    def __update_state(self):
+        if self._it >= self.max_it:
+            raise StopIteration
+        else:
+            self._start_point = 0
+            self._end_point = self.starting_idx+(self.timesteps*(self._it))
+        self._it += 1
+            
+    def __next__(self):           
+        self.__update_state()
+        train_slice = [self.data[i].iloc[
+            self._start_point:self._end_point] for i in range(len(self.data))]
+        
+        poos_slice  = [
+            self.data[i].iloc[self._end_point:] for i in range(len(self.data))]
+        
+        if len(train_slice) == 1:
+            train_slice=train_slice[0]
+        if len(poos_slice) == 1:
+            poos_slice=poos_slice[0]
+        
+        if self.verbose == 1:
+            print(f"Expanding[{self._it}/{int(self.max_it)}]")
+        if self.verbose > 1:
+            print(f"Expanding[{self._it}/{int(self.max_it)}] : \n", 
+                    f"    Estimation start: {train_slice[0].index[0].strftime('%Y-%m-%d')}",
+                    f" - Estimation end: {train_slice[0].index[-1].strftime('%Y-%m-%d')}") 
+        return self._it, train_slice, poos_slice
