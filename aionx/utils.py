@@ -147,7 +147,7 @@ class ExpandingWindowGenerator:
         
         if self.verbose == 1:
             print(f"Expanding[{self._it}/{int(self.max_it)}]")
-        if self.verbose > 1:
+        elif self.verbose > 1:
             print(f"Expanding[{self._it}/{int(self.max_it)}] : \n", 
                     f"    Estimation start: {train_slice[0].index[0].strftime('%Y-%m-%d')}",
                     f" - Estimation end: {train_slice[0].index[-1].strftime('%Y-%m-%d')}") 
