@@ -34,10 +34,10 @@ A simple usage tutorial for the density hemisphere neural network is available h
     git clone https://github.com/TheAionxGit/aionx.git
     ```
 
-2. Install the required dependencies:
+2. Install with pip
 
     ```bash
-    pip install -r requirements.txt
+    pip install aionx
     ```
 
 3. (TODO) explore the example notebooks in the [Link to Tutorial Notebook](examples/tutorial_notebook.ipynb) directory to get started.
@@ -49,5 +49,3 @@ A simple usage tutorial for the density hemisphere neural network is available h
 - [TensorFlow](https://www.tensorflow.org/) : An open-source deep learning framework.
 - [Scikit-Learn](https://scikit-learn.org/stable/) : An open-source machine learning framework.
       
-```bash
-pip install numpy pandas==2.0.0 tensorflow scikit-learn
