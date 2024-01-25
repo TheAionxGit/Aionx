@@ -40,7 +40,7 @@ A simple usage tutorial for the density hemisphere neural network is available h
     pip install aionx
     ```
 
-3. (TODO) explore the example notebooks in the [Link to Tutorial Notebook](examples/tutorial_notebook.ipynb) directory to get started.
+3. (TODO) explore the example notebooks in the [Link to Tutorial Notebook](examples) directory to get started.
 
 ## Dependencies
 
